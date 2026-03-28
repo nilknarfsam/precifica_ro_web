@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "666803906483",
+    "project_id": "precifica-ro-web",
+    "storage_bucket": "precifica-ro-web.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:666803906483:android:2169bf7a90fecff5d54dc6",
+        "android_client_info": {
+          "package_name": "com.example.precifica_ro_web"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-nLoT4AMks_tMbn7AzhNLCtRfpsCXLRk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
