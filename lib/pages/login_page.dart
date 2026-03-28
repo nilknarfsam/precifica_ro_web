@@ -1,14 +1,100 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:precifica_ro_web/pages/admin_dashboard_page.dart';
+import 'package:precifica_ro_web/pages/client_home_page.dart';
+import 'package:precifica_ro_web/services/auth_service.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   static const Color _pink = Color(0xFFFF1493);
   static const Color _cream = Color(0xFFFFF8F4);
   static const Color _chocolate = Color(0xFF4A3734);
   static const Color _mauve = Color(0xFF745853);
   static const Color _fieldBg = Color(0xFFEBE2DE);
   static const Color _divider = Color(0xFFBCAAA4);
+
+  static const String _adminEmail = 'nilknarfsam@gmail.com';
+
+  final _authService = AuthService();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onSignIn() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Informe e-mail e senha.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final credential = await _authService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+
+      final isAdmin = credential.user?.email == _adminEmail;
+
+      final destination = isAdmin
+          ? const AdminDashboardPage()
+          : const ClientHomePage();
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => destination),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(_authErrorMessage(e.code))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Não foi possível entrar. Tente novamente.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _authErrorMessage(String code) {
+    switch (code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'E-mail ou senha incorretos.';
+      case 'user-not-found':
+        return 'Não encontramos uma conta com este e-mail.';
+      case 'invalid-email':
+        return 'E-mail inválido.';
+      case 'user-disabled':
+        return 'Esta conta foi desativada.';
+      case 'too-many-requests':
+        return 'Muitas tentativas. Aguarde um momento e tente de novo.';
+      default:
+        return 'Não foi possível entrar. Verifique seus dados.';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,11 +189,14 @@ class LoginPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 40),
                       _buildTextField(
+                        controller: _emailController,
                         label: 'E-mail',
                         icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 20),
                       _buildTextField(
+                        controller: _passwordController,
                         label: 'Senha',
                         icon: Icons.lock_outline,
                         isPassword: true,
@@ -127,23 +216,33 @@ class LoginPage extends StatelessWidget {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: _isLoading ? null : _onSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _pink,
                             foregroundColor: Colors.white,
+                            disabledBackgroundColor: _pink.withValues(alpha: 0.6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(28),
                             ),
                             elevation: 4,
                             shadowColor: _pink.withValues(alpha: 0.4),
                           ),
-                          child: const Text(
-                            'Entrar',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Entrar',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -199,9 +298,11 @@ class LoginPage extends StatelessWidget {
   }
 
   Widget _buildTextField({
+    required TextEditingController controller,
     required String label,
     required IconData icon,
     bool isPassword = false,
+    TextInputType? keyboardType,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -209,7 +310,10 @@ class LoginPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
+        controller: controller,
         obscureText: isPassword,
+        keyboardType: keyboardType,
+        autocorrect: false,
         decoration: InputDecoration(
           hintText: label,
           prefixIcon: Icon(icon, color: _mauve),
